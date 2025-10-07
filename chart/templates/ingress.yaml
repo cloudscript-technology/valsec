@@ -1,0 +1,77 @@
+{{- if .Values.versionA.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ .Values.versionA.name }}
+  labels:
+    app: {{ .Values.versionA.name }}
+    version: A
+  {{- with .Values.versionA.ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  ingressClassName: {{ .Values.versionA.ingress.className }}
+  rules:
+    {{- range .Values.versionA.ingress.hosts }}
+    - host: {{ .host | quote }}
+      http:
+        paths:
+          {{- range .paths }}
+          - path: {{ .path }}
+            pathType: {{ .pathType }}
+            backend:
+              service:
+                name: {{ $.Values.versionA.name }}
+                port:
+                  number: {{ $.Values.versionA.service.port }}
+          {{- end }}
+    {{- end }}
+  tls:
+    {{- range .Values.versionA.ingress.tls }}
+    - hosts:
+        {{- range .hosts }}
+        - {{ . | quote }}
+        {{- end }}
+      secretName: {{ .secretName }}
+    {{- end }}
+---
+{{- end }}
+{{- if .Values.versionB.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ .Values.versionB.name }}
+  labels:
+    app: {{ .Values.versionB.name }}
+    version: B
+  {{- with .Values.versionB.ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  ingressClassName: {{ .Values.versionB.ingress.className }}
+  rules:
+    {{- range .Values.versionB.ingress.hosts }}
+    - host: {{ .host | quote }}
+      http:
+        paths:
+          {{- range .paths }}
+          - path: {{ .path }}
+            pathType: {{ .pathType }}
+            backend:
+              service:
+                name: {{ $.Values.versionB.name }}
+                port:
+                  number: {{ $.Values.versionB.service.port }}
+          {{- end }}
+    {{- end }}
+  tls:
+    {{- range .Values.versionB.ingress.tls }}
+    - hosts:
+        {{- range .hosts }}
+        - {{ . | quote }}
+        {{- end }}
+      secretName: {{ .secretName }}
+    {{- end }}
+{{- end }}

@@ -1,0 +1,31 @@
+{{- if .Values.versionB.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.versionB.name }}
+  labels:
+    app: {{ .Values.versionB.name }}
+    version: B
+spec:
+  replicas: {{ .Values.versionB.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Values.versionB.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.versionB.name }}
+        version: B
+    spec:
+      containers:
+        - name: {{ .Values.versionB.name }}
+          image: "{{ .Values.versionB.image.repository }}:{{ .Values.versionB.image.tag }}"
+          imagePullPolicy: {{ .Values.versionB.image.pullPolicy }}
+          env:
+            - name: VERSION
+              value: "{{ .Values.versionB.env.VERSION }}"
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+{{- end }}

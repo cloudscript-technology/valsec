@@ -1,0 +1,37 @@
+{{- if .Values.versionA.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.versionA.name }}
+  labels:
+    app: {{ .Values.versionA.name }}
+    version: A
+spec:
+  type: {{ .Values.versionA.service.type }}
+  ports:
+    - port: {{ .Values.versionA.service.port }}
+      targetPort: {{ .Values.versionA.service.targetPort }}
+      protocol: TCP
+      name: http
+  selector:
+    app: {{ .Values.versionA.name }}
+---
+{{- end }}
+{{- if .Values.versionB.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.versionB.name }}
+  labels:
+    app: {{ .Values.versionB.name }}
+    version: B
+spec:
+  type: {{ .Values.versionB.service.type }}
+  ports:
+    - port: {{ .Values.versionB.service.port }}
+      targetPort: {{ .Values.versionB.service.targetPort }}
+      protocol: TCP
+      name: http
+  selector:
+    app: {{ .Values.versionB.name }}
+{{- end }}
