@@ -13,8 +13,7 @@ A versão é controlada pela variável de ambiente `VERSION`.
 ## Estrutura do Projeto
 
 ```
-valsec/
-├── app/
+├── valsec/
 │   ├── main.go         # Código fonte da aplicação Go
 │   ├── Dockerfile      # Dockerfile para construir a imagem
 │   └── chart/          # Helm chart para implantação
