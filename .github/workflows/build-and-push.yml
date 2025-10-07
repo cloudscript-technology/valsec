@@ -112,6 +112,13 @@ jobs:
           type=raw,value=${{ needs.create-release.outputs.version }}
           type=raw,value=${{ needs.create-release.outputs.tag }}
 
+    - name: Set build arguments
+      id: build_args
+      run: |
+        echo "BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> $GITHUB_ENV
+        echo "VCS_REF=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+        echo "VERSION=${{ needs.create-release.outputs.version }}" >> $GITHUB_ENV
+
     - name: Build and push Docker image
       id: build
       uses: docker/build-push-action@v6
@@ -122,6 +129,10 @@ jobs:
         push: true
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
+        build-args: |
+          BUILD_DATE=${{ env.BUILD_DATE }}
+          VCS_REF=${{ env.VCS_REF }}
+          VERSION=${{ env.VERSION }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
 
@@ -130,4 +141,4 @@ jobs:
       with:
         subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
         subject-digest: ${{ steps.build.outputs.digest }}
-        push-to-registry: true 
+        push-to-registry: true
